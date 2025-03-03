@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { SystemStatus } from "@/components/system-status";
 import { ModelOptions } from "@/components/model-options";
 import { VoicePlayground } from "@/components/voice-playground";
@@ -19,24 +18,24 @@ export default function Home() {
       </header>
 
       <SystemStatus />
-      
+
       <ModelOptions />
-      
+
       <Tabs defaultValue="playground" className="space-y-4">
         <TabsList>
           <TabsTrigger value="playground">Voice Playground</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="playground" className="space-y-4">
           <VoicePlayground />
         </TabsContent>
-        
+
         <TabsContent value="history">
           <HistoryList />
         </TabsContent>
       </Tabs>
-      
+
       <LogPanel />
     </main>
   );

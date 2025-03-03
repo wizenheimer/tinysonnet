@@ -3,12 +3,11 @@
 import { useTinyLM } from "@/providers/tinylm-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 
 export function SystemStatus() {
-  const { 
-    capabilities, 
-    modelStatus, 
+  const {
+    capabilities,
+    modelStatus,
     modelStatusMessage,
     progressInfo
   } = useTinyLM();
@@ -45,7 +44,7 @@ export function SystemStatus() {
               <div>{capabilities.isWebGPUSupported ? "Available" : "Not Available"}</div>
             </div>
           </div>
-          
+
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <div className={`h-2 w-2 rounded-full ${getStatusColor(capabilities.fp16Supported)}`}></div>
@@ -53,7 +52,7 @@ export function SystemStatus() {
               <div>{capabilities.fp16Supported ? "Supported" : "Not Supported"}</div>
             </div>
           </div>
-          
+
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <div className={`h-2 w-2 rounded-full ${getModelStatusColor(modelStatus)}`}></div>
@@ -61,7 +60,7 @@ export function SystemStatus() {
               <div>{modelStatusMessage}</div>
             </div>
           </div>
-          
+
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <div className="font-medium">Backend:</div>
@@ -76,9 +75,9 @@ export function SystemStatus() {
               <div>{progressInfo.message}</div>
               <div>{progressInfo.percentComplete}%</div>
             </div>
-            
+
             <Progress value={progressInfo.percentComplete} className="h-2" />
-            
+
             <div className="flex justify-between text-xs text-muted-foreground">
               <div>
                 {progressInfo.overall.loadedSize} / {progressInfo.overall.totalSize}
@@ -87,12 +86,12 @@ export function SystemStatus() {
                 {progressInfo.overall.downloadSpeed} • {progressInfo.overall.eta}
               </div>
             </div>
-            
+
             {progressInfo.files.length > 0 && (
               <div className="mt-2 max-h-32 overflow-y-auto space-y-2">
                 {progressInfo.files.map(file => (
-                  <div 
-                    key={file.id} 
+                  <div
+                    key={file.id}
                     className="border rounded p-2 text-sm bg-background"
                   >
                     <div className="flex justify-between mb-1">

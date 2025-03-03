@@ -7,6 +7,37 @@
 
 import { TinyLM } from 'tinylm';
 
+type ProgressUpdate = {
+  status?: string;
+  progress?: number;
+  percentComplete?: number;
+  message?: string;
+  type?: string;
+  files?: {
+    id: string;
+    name: string;
+    status: string;
+    percentComplete: number;
+    bytesLoaded: number;
+    bytesTotal: number;
+    speed: number;
+    timeRemaining: number | null;
+  }[];
+  overall?: {
+    formattedLoaded?: string;
+    formattedTotal?: string;
+    formattedSpeed?: string;
+    formattedRemaining?: string;
+  };
+};
+
+type Environment = {
+  backend?: string;
+  device?: string;
+  platform?: string;
+  features?: string[];
+};
+
 /**
  * Helper function to check if code is running in a browser environment
  * with WebGPU support.
@@ -47,7 +78,7 @@ export function formatTime(seconds: number): string {
  * This is a wrapper around the TinyLM constructor with error handling.
  */
 export async function createTinyLM(options: {
-  progressCallback?: (progress: any) => void;
+  progressCallback?: (progress: ProgressUpdate) => void;
   progressThrottleTime?: number;
   lazyLoad?: boolean;
 }): Promise<TinyLM> {
@@ -57,12 +88,12 @@ export async function createTinyLM(options: {
       progressCallback: options.progressCallback,
       progressThrottleTime: options.progressThrottleTime || 100
     });
-    
+
     // Initialize the instance
-    await tinyLM.init({ 
-      lazyLoad: options.lazyLoad !== false 
+    await tinyLM.init({
+      lazyLoad: options.lazyLoad !== false
     });
-    
+
     return tinyLM;
   } catch (error) {
     console.error('Failed to initialize TinyLM:', error);
@@ -77,7 +108,7 @@ export async function createTinyLM(options: {
 export async function checkCapabilities(): Promise<{
   isWebGPUSupported: boolean;
   fp16Supported: boolean;
-  environment: any;
+  environment: Environment;
 }> {
   try {
     // Create temporary instance for checking capabilities

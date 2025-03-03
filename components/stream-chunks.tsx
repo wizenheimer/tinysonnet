@@ -36,29 +36,29 @@ export function StreamChunks({ chunks }: StreamChunksProps) {
                   <div className="font-medium">Chunk {chunk.index + 1}/{chunks.length}</div>
                   <div className="text-xs text-muted-foreground">{formatBytes(chunk.size)}</div>
                 </div>
-                
+
                 {chunk.text && (
                   <div className="text-xs text-muted-foreground mb-2 line-clamp-1">
-                    "{chunk.text}"
+                    &quot;{chunk.text}&quot;
                   </div>
                 )}
-                
-                <audio 
-                  controls 
+
+                <audio
+                  controls
                   src={chunk.audioUrl}
                   className="w-full h-8"
                 >
                   Your browser does not support the audio element.
                 </audio>
-                
-                <Button 
-                  asChild 
-                  variant="ghost" 
-                  size="sm" 
+
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
                   className="mt-1 h-7 px-2 text-xs"
                 >
-                  <a 
-                    href={chunk.audioUrl} 
+                  <a
+                    href={chunk.audioUrl}
                     download={`chunk_${chunk.index + 1}.wav`}
                     className="flex items-center gap-1"
                   >
