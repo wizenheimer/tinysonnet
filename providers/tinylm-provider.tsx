@@ -631,7 +631,7 @@ export function TinyLMProvider({ children }: { children: React.ReactNode }) {
           throw new Error('No audio data received from speech generation');
         }
 
-        // Create blob from the audio data (no need to modify for non-streaming)
+        // Create blob from the audio data
         const audioBlob = new Blob([result.audio], { type: result.content_type || 'audio/wav' });
         const audioUrl = URL.createObjectURL(audioBlob);
 
