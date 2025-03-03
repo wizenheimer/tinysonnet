@@ -7,15 +7,33 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Trash2 } from "lucide-react";
 
 export function LogPanel() {
-  const { logEntries, clearLogs } = useTinyLM();
+  const context = useTinyLM();
+
+  // Return early if context is null
+  if (!context) {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle>System Log</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[200px] w-full rounded-md border p-4 bg-black/90 text-white font-mono text-sm flex items-center justify-center">
+            <div className="text-muted-foreground">TinyLM context is not available.</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const { logEntries, clearLogs } = context;
 
   return (
     <Card>
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
         <CardTitle>System Log</CardTitle>
-        <Button 
-          variant="ghost" 
-          size="sm" 
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={clearLogs}
           className="h-8 w-8 p-0"
         >

@@ -78,7 +78,7 @@ type AudioResult = {
 };
 
 type TinyLMContextType = {
-  tinyLM: TinyLM | null;
+  tinyLM: typeof TinyLM | null;
   isInitialized: boolean;
   modelStatus: "not_loaded" | "loading" | "loaded" | "error";
   modelStatusMessage: string;

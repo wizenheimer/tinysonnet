@@ -5,12 +5,30 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
 export function SystemStatus() {
+  const context = useTinyLM();
+
+  // Return early if context is null
+  if (!context) {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle>System Status</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-4 text-muted-foreground">
+            TinyLM context is not available.
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const {
     capabilities,
     modelStatus,
     modelStatusMessage,
     progressInfo
-  } = useTinyLM();
+  } = context;
 
   // Determine status indicator colors
   const getStatusColor = (status: boolean) => {

@@ -12,6 +12,21 @@ import { StreamChunks } from "@/components/stream-chunks";
 import { Badge } from "@/components/ui/badge";
 
 export function VoicePlayground() {
+  const context = useTinyLM();
+
+  // Return early if context is null
+  if (!context) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center py-8 text-muted-foreground">
+            TinyLM context is not available.
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const {
     modelStatus,
     isGenerating,
@@ -27,7 +42,7 @@ export function VoicePlayground() {
     audioResult,
     voicesList,
     streamChunks,
-  } = useTinyLM();
+  } = context;
 
   const isLoaded = modelStatus === "loaded";
 

@@ -13,6 +13,21 @@ import {
 import { Label } from "@/components/ui/label";
 
 export function ModelOptions() {
+  const context = useTinyLM();
+
+  // Return early if context is null
+  if (!context) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center py-4 text-muted-foreground">
+            TinyLM context is not available.
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const {
     isInitialized,
     modelStatus,
@@ -22,7 +37,7 @@ export function ModelOptions() {
     setAudioFormat,
     loadModel,
     unloadModel,
-  } = useTinyLM();
+  } = context;
 
   const isLoading = modelStatus === "loading";
   const isLoaded = modelStatus === "loaded";
