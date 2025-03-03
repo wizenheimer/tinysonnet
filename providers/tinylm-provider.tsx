@@ -1,8 +1,10 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { TinyLM } from "tinylm";
 import { toast } from "sonner";
+
+// Import TinyLM dynamically only in browser environment
+let TinyLM: any;
 
 // Types from TinyLM
 type ProgressUpdate = {
@@ -250,11 +252,11 @@ const VOICES: Record<string, VoiceInfo> = {
   }
 };
 
-// Create context with default values
-const TinyLMContext = createContext<TinyLMContextType | undefined>(undefined);
+// Create context
+const TinyLMContext = createContext<TinyLMContextType | null>(null);
 
 export function TinyLMProvider({ children }: { children: React.ReactNode }) {
-  const [tinyLM, setTinyLM] = useState<TinyLM | null>(null);
+  const [tinyLM, setTinyLM] = useState<any>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [modelStatus, setModelStatus] = useState<"not_loaded" | "loading" | "loaded" | "error">("not_loaded");
   const [modelStatusMessage, setModelStatusMessage] = useState("Not loaded");
@@ -281,7 +283,7 @@ export function TinyLMProvider({ children }: { children: React.ReactNode }) {
   const [selectedModel, setSelectedModel] = useState("onnx-community/Kokoro-82M-v1.0-ONNX");
   const [audioFormat, setAudioFormat] = useState<"mp3" | "wav">("wav");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [streamingEnabled, setStreamingEnabled] = useState(false);
+  const [streamingEnabled, setStreamingEnabled] = useState(true);
   const [selectedVoice, setSelectedVoice] = useState("af");
   const [playgroundText, setPlaygroundText] = useState("");
   const [playgroundSpeed, setPlaygroundSpeed] = useState(1.0);
@@ -289,40 +291,15 @@ export function TinyLMProvider({ children }: { children: React.ReactNode }) {
   const [generationHistory, setGenerationHistory] = useState<AudioResult[]>([]);
   const [streamChunks, setStreamChunks] = useState<any[]>([]);
 
-  // Initialize TinyLM instance
-  const initTinyLM = useCallback(async () => {
-    try {
-      addLogEntry("Initializing TinyLM...");
-
-      // Create TinyLM instance with progress tracking
-      const newTinyLM = new TinyLM({
-        progressCallback: handleProgressUpdate,
-        progressThrottleTime: 50
-      });
-
-      // Check hardware capabilities
-      addLogEntry("Checking hardware capabilities...");
-      const caps = await newTinyLM.models.check();
-
-      setCapabilities({
-        isWebGPUSupported: caps.isWebGPUSupported,
-        fp16Supported: caps.fp16Supported,
-        backendName: caps.environment?.backend || "Unknown",
-      });
-
-      // Initialize TinyLM (without loading model yet)
-      await newTinyLM.init({ lazyLoad: true });
-
-      setTinyLM(newTinyLM);
-      setIsInitialized(true);
-      addLogEntry("Initialization complete. Ready to load TTS model.");
-
-    } catch (error) {
-      addLogEntry(`Error initializing TinyLM: ${error instanceof Error ? error.message : String(error)}`);
-      toast.error("Initialization Error", {
-        description: String(error),
-      });
-    }
+  // Add a log entry
+  const addLogEntry = useCallback((message: string) => {
+    setLogEntries((prev) => [
+      ...prev,
+      {
+        timestamp: new Date(),
+        message,
+      },
+    ]);
   }, []);
 
   // Handle progress updates from TinyLM
@@ -390,21 +367,76 @@ export function TinyLMProvider({ children }: { children: React.ReactNode }) {
         setModelStatusMessage("Not loaded");
       }
     }
-  }, []);
+  }, [addLogEntry]);
 
-  // Add log entry
-  const addLogEntry = useCallback((message: string) => {
-    setLogEntries(prev => [
-      ...prev,
-      { timestamp: new Date(), message }
-    ]);
-    console.log(message);
-  }, []);
+  // Initialize TinyLM
+  const initTinyLM = useCallback(async () => {
+    try {
+      // Only import and initialize TinyLM in browser environment
+      if (typeof window !== 'undefined') {
+        // Dynamically import TinyLM
+        const tinylmModule = await import('tinylm');
+        TinyLM = tinylmModule.TinyLM;
 
-  // Clear logs
-  const clearLogs = useCallback(() => {
-    setLogEntries([]);
-  }, []);
+        addLogEntry("Initializing TinyLM...");
+
+        // Create TinyLM instance with progress tracking
+        const newTinyLM = new TinyLM({
+          progressCallback: handleProgressUpdate,
+          progressThrottleTime: 50
+        });
+
+        // Check hardware capabilities
+        addLogEntry("Checking hardware capabilities...");
+        try {
+          const caps = await newTinyLM.models.check();
+
+          setCapabilities({
+            isWebGPUSupported: caps.isWebGPUSupported,
+            fp16Supported: caps.fp16Supported,
+            backendName: caps.environment?.backend || "Unknown",
+          });
+
+          // Log capability details
+          addLogEntry(`WebGPU support: ${caps.isWebGPUSupported ? 'Yes' : 'No'}`);
+          addLogEntry(`FP16 support: ${caps.fp16Supported ? 'Yes' : 'No'}`);
+          addLogEntry(`Backend: ${caps.environment?.backend || "Unknown"}`);
+        } catch (error) {
+          console.warn("Error checking capabilities:", error);
+          addLogEntry(`Error checking capabilities: ${error}`);
+
+          // Set default capabilities based on browser detection
+          const isWebGPUSupported = 'gpu' in navigator;
+          setCapabilities((prev) => ({
+            ...prev,
+            isWebGPUSupported,
+            backendName: isWebGPUSupported ? "webgpu" : "wasm"
+          }));
+        }
+
+        // Initialize TinyLM (without loading model yet)
+        try {
+          await newTinyLM.init({ lazyLoad: true });
+          addLogEntry("Initialization complete. Ready to load TTS model.");
+        } catch (error) {
+          console.error("Error in TinyLM init:", error);
+          addLogEntry(`Error in TinyLM init: ${error}`);
+        }
+
+        setTinyLM(newTinyLM);
+        setIsInitialized(true);
+
+        // Auto-load model if selected
+        if (selectedModel) {
+          setTimeout(() => loadModel(), 500);
+        }
+      }
+    } catch (error) {
+      console.error("Error initializing TinyLM:", error);
+      addLogEntry(`Error initializing TinyLM: ${error}`);
+      toast.error("Failed to initialize TinyLM");
+    }
+  }, [selectedModel, addLogEntry, handleProgressUpdate]);
 
   // Load the selected model
   const loadModel = useCallback(async () => {
@@ -679,12 +711,19 @@ export function TinyLMProvider({ children }: { children: React.ReactNode }) {
     return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
   };
 
-  // Initialize on first load
+  // Call initTinyLM on component mount only in browser
   useEffect(() => {
-    if (typeof window !== 'undefined' && !isInitialized) {
+    if (typeof window !== 'undefined') {
       initTinyLM();
     }
-  }, [initTinyLM, isInitialized]);
+
+    // Cleanup on unmount
+    return () => {
+      if (tinyLM) {
+        // Cleanup logic here if needed
+      }
+    };
+  }, []);
 
   const value = {
     tinyLM,
@@ -718,7 +757,9 @@ export function TinyLMProvider({ children }: { children: React.ReactNode }) {
     setPlaygroundSpeed,
     generateSpeech,
     addLogEntry,
-    clearLogs,
+    clearLogs: () => {
+      setLogEntries([]);
+    },
   };
 
   return (

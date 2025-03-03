@@ -72,6 +72,7 @@ export function VoicePlayground() {
                 checked={streamingEnabled}
                 onCheckedChange={setStreamingEnabled}
                 disabled={!isLoaded}
+                defaultChecked={true}
               />
               <Label htmlFor="stream-toggle">Enable Streaming</Label>
               <div className="text-xs text-muted-foreground ml-2">
@@ -94,7 +95,7 @@ export function VoicePlayground() {
                     `}
                   >
                     <div className="font-medium flex gap-1 items-center">
-                      {voice.name} 
+                      {voice.name}
                       {voice.traits && <span>{voice.traits}</span>}
                     </div>
                     <div className="flex justify-between text-xs text-muted-foreground">
@@ -109,9 +110,9 @@ export function VoicePlayground() {
               </div>
             </div>
 
-            <Button 
-              onClick={generateSpeech} 
-              disabled={!isLoaded || isGenerating || !playgroundText.trim()} 
+            <Button
+              onClick={generateSpeech}
+              disabled={!isLoaded || isGenerating || !playgroundText.trim()}
               className="w-full mt-4"
             >
               {isGenerating ? (
@@ -132,7 +133,7 @@ export function VoicePlayground() {
           <div className="text-lg font-medium flex items-center gap-2">
             Generated Audio - {voicesList[audioResult.voice]?.name}
             <Badge variant="outline">
-              {voicesList[audioResult.voice]?.gender}, 
+              {voicesList[audioResult.voice]?.gender},
               {voicesList[audioResult.voice]?.language.toUpperCase()}
               {audioResult.chunks && ` - ${audioResult.chunks} chunks`}
             </Badge>
@@ -142,7 +143,7 @@ export function VoicePlayground() {
             <StreamChunks chunks={streamChunks} />
           )}
 
-          <AudioPlayer 
+          <AudioPlayer
             audioUrl={audioResult.audioUrl}
             fileName={`voice_${audioResult.voice}_${new Date().toISOString().replace(/[-:.]/g, '')}.${audioResult.contentType.includes("mp3") ? "mp3" : "wav"}`}
             generationTime={audioResult.timeTaken}
