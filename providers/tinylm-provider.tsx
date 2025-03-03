@@ -521,15 +521,11 @@ export function TinyLMProvider({ children }: { children: React.ReactNode }) {
 
       // Handle streaming result
       if (streamingEnabled && result.object === 'audio.speech.stream' && 'chunks' in result && result.chunks.length > 0) {
-        // Array to store all audio data
-        const audioChunks: ArrayBuffer[] = [];
         const contentType = result.chunks[0].content_type;
+        const isWav = contentType.includes('wav');
 
-        // Process all chunks
+        // Process all chunks for individual playback
         const processedChunks = result.chunks.map((chunk: SpeechChunk, index: number) => {
-          // Store the chunk's raw audio data
-          audioChunks.push(chunk.audio);
-
           // Create blob for this chunk
           const chunkBlob = new Blob([chunk.audio], { type: contentType });
           const chunkUrl = URL.createObjectURL(chunkBlob);
@@ -545,39 +541,97 @@ export function TinyLMProvider({ children }: { children: React.ReactNode }) {
         // Update stream chunks display
         setStreamChunks(processedChunks);
 
-        // Calculate total size
-        const totalLength = audioChunks.reduce((acc, chunk) => acc + chunk.byteLength, 0);
-        addLogEntry(`Total combined size: ${formatBytes(totalLength)}`);
+        // For WAV files, we need to handle headers properly
+        if (isWav) {
+          // Get the first chunk to read WAV header
+          const firstChunk = new Uint8Array(result.chunks[0].audio);
+          const headerLength = 44; // Standard WAV header length
+          const header = firstChunk.slice(0, headerLength);
 
-        // Create the final blob with all chunks
-        const combinedBlob = new Blob(audioChunks, { type: contentType });
-        const audioUrl = URL.createObjectURL(combinedBlob);
+          // Calculate total audio data length (excluding headers from subsequent chunks)
+          const totalAudioLength = result.chunks.reduce((total, chunk, index) => {
+            return total + (index === 0 ? chunk.audio.byteLength : chunk.audio.byteLength - headerLength);
+          }, 0);
 
-        // Create new result
-        const newResult: AudioResult = {
-          id: `audio-${Date.now()}`,
-          text: playgroundText,
-          voice: selectedVoice,
-          speed: playgroundSpeed,
-          audioUrl: audioUrl,
-          audioBlob: combinedBlob,
-          contentType: contentType,
-          time: new Date(),
-          timeTaken: timeTaken,
-          chunks: result.chunks.length,
-        };
+          // Create a new buffer for the complete audio
+          const completeAudio = new Uint8Array(totalAudioLength);
 
-        // Update audio result and history
-        setAudioResult(newResult);
-        setGenerationHistory(prev => [newResult, ...prev.slice(0, 49)]);
+          // Copy the header from the first chunk
+          completeAudio.set(header, 0);
 
-      } else if (!streamingEnabled) {
+          // Update the file size in the header (4 bytes at position 4)
+          const fileSize = totalAudioLength - 8; // File size minus 8 bytes for RIFF header
+          completeAudio[4] = fileSize & 0xFF;
+          completeAudio[5] = (fileSize >> 8) & 0xFF;
+          completeAudio[6] = (fileSize >> 16) & 0xFF;
+          completeAudio[7] = (fileSize >> 24) & 0xFF;
+
+          // Update the data chunk size (4 bytes at position 40)
+          const dataSize = totalAudioLength - headerLength;
+          completeAudio[40] = dataSize & 0xFF;
+          completeAudio[41] = (dataSize >> 8) & 0xFF;
+          completeAudio[42] = (dataSize >> 16) & 0xFF;
+          completeAudio[43] = (dataSize >> 24) & 0xFF;
+
+          // Copy audio data from all chunks
+          let offset = headerLength;
+          result.chunks.forEach((chunk, index) => {
+            const chunkData = new Uint8Array(chunk.audio);
+            const dataStart = index === 0 ? headerLength : headerLength; // Skip header for all chunks
+            const dataLength = chunk.audio.byteLength - headerLength;
+            completeAudio.set(chunkData.slice(dataStart), offset);
+            offset += dataLength;
+          });
+
+          // Create the final blob
+          const combinedBlob = new Blob([completeAudio], { type: contentType });
+          const audioUrl = URL.createObjectURL(combinedBlob);
+
+          // Create new result
+          const newResult: AudioResult = {
+            id: `audio-${Date.now()}`,
+            text: playgroundText,
+            voice: selectedVoice,
+            speed: playgroundSpeed,
+            audioUrl: audioUrl,
+            audioBlob: combinedBlob,
+            contentType: contentType,
+            time: new Date(),
+            timeTaken: timeTaken,
+            chunks: result.chunks.length,
+          };
+
+          // Update audio result and history
+          setAudioResult(newResult);
+          setGenerationHistory(prev => [newResult, ...prev.slice(0, 49)]);
+        } else {
+          // For non-WAV formats (e.g., MP3), we can concatenate directly
+          const combinedBlob = new Blob(result.chunks.map(chunk => chunk.audio), { type: contentType });
+          const audioUrl = URL.createObjectURL(combinedBlob);
+
+          const newResult: AudioResult = {
+            id: `audio-${Date.now()}`,
+            text: playgroundText,
+            voice: selectedVoice,
+            speed: playgroundSpeed,
+            audioUrl: audioUrl,
+            audioBlob: combinedBlob,
+            contentType: contentType,
+            time: new Date(),
+            timeTaken: timeTaken,
+            chunks: result.chunks.length,
+          };
+
+          setAudioResult(newResult);
+          setGenerationHistory(prev => [newResult, ...prev.slice(0, 49)]);
+        }
+      } else {
         // Handle non-streaming result
         if (!result || !('audio' in result)) {
           throw new Error('No audio data received from speech generation');
         }
 
-        // Create blob from the audio data
+        // Create blob from the audio data (no need to modify for non-streaming)
         const audioBlob = new Blob([result.audio], { type: result.content_type || 'audio/wav' });
         const audioUrl = URL.createObjectURL(audioBlob);
 
@@ -597,8 +651,6 @@ export function TinyLMProvider({ children }: { children: React.ReactNode }) {
         // Update audio result and history
         setAudioResult(newResult);
         setGenerationHistory(prev => [newResult, ...prev.slice(0, 49)]);
-      } else {
-        throw new Error('No valid audio data received from speech generation');
       }
 
       addLogEntry(`Speech generated successfully in ${Math.round(timeTaken)}ms`);
