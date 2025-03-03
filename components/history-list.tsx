@@ -6,7 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 
 export function HistoryList() {
-  const { generationHistory, voicesList } = useTinyLM();
+  const context = useTinyLM();
+
+  // Return early if context is null
+  if (!context) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        TinyLM context is not available.
+      </div>
+    );
+  }
+
+  const { generationHistory, voicesList } = context;
 
   if (generationHistory.length === 0) {
     return (
